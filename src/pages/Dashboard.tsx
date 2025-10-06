@@ -53,7 +53,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col overflow-auto">
       <DashboardHeader 
         currentDate={currentDate} 
         onNavigateDate={navigateDate}
@@ -62,7 +62,7 @@ const Dashboard = () => {
       />
       
       {/* Main Dashboard Grid */}
-      <div className="flex-1 p-4 overflow-hidden">
+      <div className="flex-1 p-4 overflow-auto">
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 h-full max-w-[1920px] mx-auto">
           {/* Column 1 - Top 5 Vendedores */}
           {currentReport && <TopSellersCard report={currentReport} />}
