@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Input } from "@/components/ui/input";
-import { maskCurrencyInput, parseCurrencyBR } from "@/lib/currency";
+import { formatCurrencyInput, parseCurrencyBR, maskCurrencyInput } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
 export interface CurrencyInputProps extends Omit<React.ComponentProps<"input">, 'onChange' | 'value'> {
@@ -16,14 +16,16 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
     // Atualiza o valor exibido quando o valor prop muda
     React.useEffect(() => {
       if (typeof value === 'number') {
-        if (value === 0) {
-          setDisplayValue('');
-        } else {
-          setDisplayValue(maskCurrencyInput((value * 100).toString()));
+        const formatted = formatCurrencyInput(value);
+        if (formatted !== displayValue) {
+          setDisplayValue(formatted);
         }
       } else if (typeof value === 'string' && value !== '') {
         const numericValue = parseCurrencyBR(value);
-        setDisplayValue(maskCurrencyInput((numericValue * 100).toString()));
+        const formatted = formatCurrencyInput(numericValue);
+        if (formatted !== displayValue) {
+          setDisplayValue(formatted);
+        }
       } else {
         setDisplayValue('');
       }
@@ -32,21 +34,19 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value;
       
-      // Se estiver apagando, permite valor vazio
       if (inputValue === '') {
         setDisplayValue('');
         onChange?.(0);
         return;
       }
       
-      // Aplica a máscara
+      // Aplica a máscara que trata os dígitos como centavos
       const maskedValue = maskCurrencyInput(inputValue);
       setDisplayValue(maskedValue);
       
-      // Converte para número e chama onChange
+      // Converte para número
       const numericValue = parseCurrencyBR(maskedValue);
       
-      // Verifica se permite valores negativos
       if (!allowNegative && numericValue < 0) {
         return;
       }
@@ -55,11 +55,10 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
     };
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-      // Garante que sempre termine com ,00 se não tiver centavos
-      if (displayValue && !displayValue.includes(',')) {
-        const newValue = displayValue + ',00';
-        setDisplayValue(newValue);
-        const numericValue = parseCurrencyBR(newValue);
+      if (displayValue && displayValue !== '0,00') {
+        const numericValue = parseCurrencyBR(displayValue);
+        const formatted = formatCurrencyInput(numericValue);
+        setDisplayValue(formatted);
         onChange?.(numericValue);
       }
       props.onBlur?.(e);
