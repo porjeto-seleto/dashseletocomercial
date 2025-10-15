@@ -17,6 +17,7 @@ const PredictedVsActualCard = ({ currentDate }: PredictedVsActualCardProps) => {
   const [chartData, setChartData] = useState<any[]>([]);
   const [totalPredicted, setTotalPredicted] = useState(0);
   const [totalActual, setTotalActual] = useState(0);
+  const [totalSold, setTotalSold] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -75,7 +76,7 @@ const PredictedVsActualCard = ({ currentDate }: PredictedVsActualCardProps) => {
 
         const { data: reportsData, error: reportsError } = await supabase
           .from('daily_reports')
-          .select('report_date, total_effective')
+          .select('report_date, total_effective, total_sold')
           .gte('report_date', startDate)
           .lte('report_date', endDate)
           .order('report_date');
@@ -88,6 +89,7 @@ const PredictedVsActualCard = ({ currentDate }: PredictedVsActualCardProps) => {
         // Criar array com dados do mês completo
         const monthData = [];
         let cumulativeActual = 0;
+        let cumulativeSold = 0;
 
         for (let day = 1; day <= daysInMonth; day++) {
           const dayDate = format(new Date(referenceDate.getFullYear(), referenceDate.getMonth(), day), 'yyyy-MM-dd');
@@ -95,6 +97,7 @@ const PredictedVsActualCard = ({ currentDate }: PredictedVsActualCardProps) => {
           
           if (dayReport) {
             cumulativeActual = dayReport.total_effective;
+            cumulativeSold = dayReport.total_sold;
           }
 
           const cumulativePredicted = dailyGoal * day;
@@ -102,13 +105,15 @@ const PredictedVsActualCard = ({ currentDate }: PredictedVsActualCardProps) => {
           monthData.push({
             day: day,
             previsto: Math.round(cumulativePredicted),
-            efetivado: day <= currentDay ? Math.round(cumulativeActual) : null
+            efetivado: day <= currentDay ? Math.round(cumulativeActual) : null,
+            vendido: day <= currentDay ? Math.round(cumulativeSold) : null
           });
         }
 
         setChartData(monthData);
         setTotalPredicted(Math.round(dailyGoal * currentDay));
         setTotalActual(Math.round(cumulativeActual));
+        setTotalSold(Math.round(cumulativeSold));
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
       } finally {
@@ -132,9 +137,15 @@ const PredictedVsActualCard = ({ currentDate }: PredictedVsActualCardProps) => {
     return () => clearInterval(interval);
   }, []);
 
-  const pieData = [
+  // Dados para a camada externa (Previsto)
+  const outerPieData = [
+    { name: 'Previsto', value: totalPredicted, color: '#3B82F6' }
+  ];
+
+  // Dados para a camada interna (Efetivado + Vendido)
+  const innerPieData = [
     { name: 'Efetivado', value: totalActual, color: '#10B981' },
-    { name: 'Restante', value: Math.max(0, totalPredicted - totalActual), color: '#F3F4F6' },
+    { name: 'Vendido', value: totalSold, color: '#F59E0B' },
   ];
 
   const gaugePercent = totalPredicted > 0 ? (totalActual / totalPredicted) * 100 : 0;
@@ -176,6 +187,15 @@ const PredictedVsActualCard = ({ currentDate }: PredictedVsActualCardProps) => {
           connectNulls={false}
           name="Efetivado"
         />
+        <Line 
+          type="monotone" 
+          dataKey="vendido" 
+          stroke="#F59E0B" 
+          strokeWidth={2}
+          dot={false}
+          connectNulls={false}
+          name="Vendido"
+        />
       </RechartsLineChart>
     </ResponsiveContainer>
   );
@@ -183,19 +203,37 @@ const PredictedVsActualCard = ({ currentDate }: PredictedVsActualCardProps) => {
   const renderPieChart = () => (
     <ResponsiveContainer width="100%" height={180}>
       <RechartsPieChart>
+        {/* Camada externa - Previsto */}
         <Pie
-          data={pieData}
+          data={outerPieData}
           cx="50%"
           cy="50%"
-          innerRadius={40}
-          outerRadius={70}
+          innerRadius={60}
+          outerRadius={75}
+          dataKey="value"
+          startAngle={90}
+          endAngle={450}
+        >
+          {outerPieData.map((entry, index) => (
+            <Cell key={`outer-${index}`} fill={entry.color} opacity={0.3} />
+          ))}
+        </Pie>
+        
+        {/* Camada interna - Efetivado + Vendido */}
+        <Pie
+          data={innerPieData}
+          cx="50%"
+          cy="50%"
+          innerRadius={30}
+          outerRadius={55}
           paddingAngle={2}
           dataKey="value"
         >
-          {pieData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.color} />
+          {innerPieData.map((entry, index) => (
+            <Cell key={`inner-${index}`} fill={entry.color} />
           ))}
         </Pie>
+        
         <Tooltip formatter={(value: any) => formatCurrencyBR(value)} />
       </RechartsPieChart>
     </ResponsiveContainer>
@@ -250,14 +288,14 @@ const PredictedVsActualCard = ({ currentDate }: PredictedVsActualCardProps) => {
   }
 
   return (
-    <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
-      <CardHeader className="text-center pb-4">
+    <Card className="h-full flex flex-col transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
+      <CardHeader className="text-center pb-4 flex-shrink-0">
         <CardTitle className="text-xl font-bold flex items-center justify-center gap-2">
           <BarChart3 className="h-5 w-5 text-primary" />
-          PREVISTO VS EFETIVADO
+          PREVISTO VS EFETIVADO VS VENDIDO
         </CardTitle>
       </CardHeader>
-      <CardContent className="text-center space-y-6">
+      <CardContent className="text-center space-y-6 flex-1 flex flex-col justify-center overflow-auto">
         
         <div className="flex items-center gap-4">
           {/* Botões verticais à esquerda */}
@@ -309,6 +347,12 @@ const PredictedVsActualCard = ({ currentDate }: PredictedVsActualCardProps) => {
                   <div className="w-3 h-0.5 bg-green-500"></div>
                   <span className="text-xs text-muted-foreground">
                     Efetivado: {formatCurrencyBR(totalActual)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-0.5 bg-amber-500"></div>
+                  <span className="text-xs text-muted-foreground">
+                    Vendido: {formatCurrencyBR(totalSold)}
                   </span>
                 </div>
               </div>
