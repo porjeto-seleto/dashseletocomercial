@@ -104,9 +104,19 @@ const TopSellersCard = ({ report }: TopSellersCardProps) => {
                 </div>
 
                 <div className="flex justify-between items-center mt-1">
-                  <Badge variant="outline" className="text-xs text-primary border-primary">{seller.team}</Badge>
-                  <Badge variant="outline">OC {seller.oc}</Badge>
-                  <Badge variant="outline">Conversão {seller.conversion}%</Badge>
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "text-xs border-primary",
+                      seller.team === "Alpha" && "text-black",
+                      seller.team === "Beta" && "text-primary",
+                      seller.team === "Gamma" && "text-amber-700"
+                    )}
+                  >
+                    {seller.team}
+                  </Badge>
+                  <Badge variant="outline" className="border-primary">OC {seller.oc}</Badge>
+                  <Badge variant="outline" className="border-primary">Conversão {seller.conversion}%</Badge>
                   <div className={cn(goalBadge.className)}>{goalBadge.text}</div>
                 </div>
               </div>
