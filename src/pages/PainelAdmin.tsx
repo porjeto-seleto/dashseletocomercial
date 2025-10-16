@@ -19,6 +19,14 @@ import { formatCurrencyBR } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { GlobalGoal } from "@/hooks/useAdminData";
 
+// Função para normalizar data evitando problemas de timezone
+const normalizeDateToMidnight = (date: Date | undefined): Date | null => {
+  if (!date) return null;
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+};
+
 const PainelAdmin = () => {
   const [activeTab, setActiveTab] = useState("config");
   const {
@@ -100,14 +108,53 @@ const PainelAdmin = () => {
     }
   };
 
+  const calculateGoalStatus = (startDate: Date, periodType: string): 'active' | 'completed' | 'paused' => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    
+    const endDate = calculateEndDate(startDate, periodType);
+    
+    // Se a data de fim já passou, meta está completa
+    if (endDate < now) {
+      return 'completed';
+    }
+    
+    // Se a meta ainda não começou, está pausada
+    if (startDate > now) {
+      return 'paused';
+    }
+    
+    // Meta está no período vigente
+    switch (periodType) {
+      case 'mensal':
+        // Verifica se está no mesmo mês/ano
+        return (startDate.getMonth() === now.getMonth() && 
+                startDate.getFullYear() === now.getFullYear()) 
+          ? 'active' 
+          : 'completed';
+      
+      case 'trimestral':
+      case 'semestral':
+      case 'anual':
+        // Verifica se está dentro do intervalo
+        return (startDate <= now && now <= endDate) 
+          ? 'active' 
+          : 'completed';
+      
+      default:
+        return 'active';
+    }
+  };
+
   const handleCreateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!goalForm.title.trim() || !goalForm.targetValue || !goalForm.startDate) return;
     
     const endDate = calculateEndDate(goalForm.startDate, goalForm.periodType);
+    const status = calculateGoalStatus(goalForm.startDate, goalForm.periodType);
     const periodString = `${goalForm.periodType}:${format(goalForm.startDate, 'yyyy-MM-dd')}-${format(endDate, 'yyyy-MM-dd')}`;
     
-    await createGoal(goalForm.title, parseFloat(goalForm.targetValue), periodString);
+    await createGoal(goalForm.title, parseFloat(goalForm.targetValue), periodString, status);
     setGoalForm({ 
       title: '', 
       targetValue: '', 
@@ -498,10 +545,11 @@ const PainelAdmin = () => {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={goalForm.startDate}
+                            selected={goalForm.startDate || undefined}
                             onSelect={(date) => {
-                              const endDate = date ? calculateEndDate(date, goalForm.periodType) : null;
-                              setGoalForm(prev => ({ ...prev, startDate: date, endDate }));
+                              const normalizedDate = normalizeDateToMidnight(date);
+                              const endDate = normalizedDate ? calculateEndDate(normalizedDate, goalForm.periodType) : null;
+                              setGoalForm(prev => ({ ...prev, startDate: normalizedDate, endDate }));
                             }}
                             initialFocus
                             className={cn("p-3 pointer-events-auto")}
@@ -522,8 +570,19 @@ const PainelAdmin = () => {
                     </div>
                   </div>
                   {goalForm.startDate && goalForm.endDate && (
-                    <div className="text-sm text-muted-foreground">
-                      Período: {format(goalForm.startDate, "dd/MM/yyyy", { locale: ptBR })} até {format(goalForm.endDate, "dd/MM/yyyy", { locale: ptBR })}
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-muted-foreground">
+                        Período: {format(goalForm.startDate, "dd/MM/yyyy", { locale: ptBR })} até {format(goalForm.endDate, "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                      <Badge variant={
+                        calculateGoalStatus(goalForm.startDate, goalForm.periodType) === 'active' ? 'default' :
+                        calculateGoalStatus(goalForm.startDate, goalForm.periodType) === 'completed' ? 'secondary' : 'outline'
+                      }>
+                        Status previsto: {
+                          calculateGoalStatus(goalForm.startDate, goalForm.periodType) === 'active' ? 'Ativa' :
+                          calculateGoalStatus(goalForm.startDate, goalForm.periodType) === 'completed' ? 'Concluída' : 'Pausada'
+                        }
+                      </Badge>
                     </div>
                   )}
                 </form>
