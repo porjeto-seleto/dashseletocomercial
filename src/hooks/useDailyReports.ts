@@ -114,12 +114,13 @@ export const useDailyReports = () => {
 
       if (!reportData) {
         // Try to get the most recent report to maintain persistence
-        const { data: latestReport, error: latestError } = await supabase
-          .from('daily_reports')
-          .select('*')
-          .order('report_date', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+      const { data: latestReport, error: latestError } = await supabase
+        .from('daily_reports')
+        .select('*')
+        .lt('report_date', date)
+        .order('report_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
         if (latestError || !latestReport) {
           setCurrentReport(null);
