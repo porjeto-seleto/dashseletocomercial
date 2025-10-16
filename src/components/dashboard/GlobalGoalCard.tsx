@@ -78,20 +78,21 @@ const GlobalGoalCard = ({ currentDate }: GlobalGoalCardProps) => {
           }
 
           // Conversão e fallback seguro
-          let totalSold = parseFloat(dayReport?.total_sold || "0");
-          let totalEffective = parseFloat(dayReport?.total_effective || "0")
+          let totalSold = parseFloat(String(dayReport?.total_sold || 0));
+          let totalEffective = parseFloat(String(dayReport?.total_effective || 0));
 
           // Se não encontrar o dia, busca o último relatório
-          if (!dayReport) {
-            const { data: latestReport } = await supabase
-              .from("daily_reports")
-              .select("total_sold, total_effective")
-              .order("report_date", { ascending: false })
-              .limit(1)
-              .maybeSingle();
+      if (!dayReport) {
+        const { data: latestReport } = await supabase
+          .from("daily_reports")
+          .select("total_sold, total_effective")
+          .lt("report_date", reportDateStr)
+          .order("report_date", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-            totalSold = parseFloat(latestReport?.total_sold ?? "0") || 0;
-            totalEffective = parseFloat(latestReport?.total_effective ?? "0") || 0;
+            totalSold = parseFloat(String(latestReport?.total_sold ?? 0)) || 0;
+            totalEffective = parseFloat(String(latestReport?.total_effective ?? 0)) || 0;
           }
 
           setCurrentGoal({
@@ -154,14 +155,14 @@ const GlobalGoalCard = ({ currentDate }: GlobalGoalCardProps) => {
   const isGoalReached = progressPercent >= 100;
 
   return (
-    <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
-      <CardHeader className="text-center pb-4">
+    <Card className="h-full flex flex-col transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
+      <CardHeader className="text-center pb-4 flex-shrink-0">
         <CardTitle className="text-xl font-bold flex items-center justify-center gap-2">
           <Target className="h-5 w-5 text-secondary" />
           META GLOBAL
         </CardTitle>
       </CardHeader>
-      <CardContent className="text-center space-y-6">
+      <CardContent className="text-center space-y-6 flex-1 flex flex-col justify-center overflow-auto">
         <div>
           <div className="text-lg font-medium text-muted-foreground mb-2">
             {currentGoal.title}
