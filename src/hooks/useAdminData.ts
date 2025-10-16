@@ -200,11 +200,16 @@ export const useAdminData = () => {
   };
 
   // Goals CRUD
-  const createGoal = async (title: string, targetValue: number, period: string) => {
+  const createGoal = async (
+    title: string, 
+    targetValue: number, 
+    period: string, 
+    status: 'active' | 'completed' | 'paused' = 'active'
+  ) => {
     try {
       const { data, error } = await supabase
         .from('global_goals')
-        .insert({ title, target_value: targetValue, period })
+        .insert({ title, target_value: targetValue, period, status })
         .select()
         .single();
 
