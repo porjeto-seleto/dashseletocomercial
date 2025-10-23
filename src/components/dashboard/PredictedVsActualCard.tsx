@@ -295,7 +295,7 @@ const PredictedVsActualCard = ({ currentDate }: PredictedVsActualCardProps) => {
           PREVISTO VS EFETIVADO VS VENDIDO
         </CardTitle>
       </CardHeader>
-      <CardContent className="text-center space-y-6 flex-1 flex flex-col justify-center overflow-auto">
+      <CardContent className="text-center space-y-4 flex-1 flex flex-col justify-center px-4">
         
         <div className="flex items-center gap-4">
           {/* Botões verticais à esquerda */}
