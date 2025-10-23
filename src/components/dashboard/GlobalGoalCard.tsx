@@ -30,7 +30,7 @@ const GlobalGoalCard = ({ currentDate }: GlobalGoalCardProps) => {
 
         const { data: goalData, error: goalError } = await supabase
           .from("global_goals")
-          .select("*")
+          .select("id, title, target_value, current_value, period, status")
           .eq("status", "active")
           .order("created_at", { ascending: false });
 
@@ -162,7 +162,7 @@ const GlobalGoalCard = ({ currentDate }: GlobalGoalCardProps) => {
           META GLOBAL
         </CardTitle>
       </CardHeader>
-      <CardContent className="text-center space-y-6 flex-1 flex flex-col justify-center overflow-auto">
+      <CardContent className="text-center space-y-4 flex-1 flex flex-col justify-center px-4">
         <div>
           <div className="text-lg font-medium text-muted-foreground mb-2">
             {currentGoal.title}
